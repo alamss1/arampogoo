@@ -1,0 +1,1 @@
+{ "name": "koleksi-pokemon", "private": true, "scripts": { "local": "node server.js" }, "dependencies": { "@vercel/blob": "latest" } }

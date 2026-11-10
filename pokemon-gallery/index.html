@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Pokemon Premium Gallery</title>
+<script>
+(function () { var off = false;
+  try { var v = localStorage.getItem('fx'); off = v ? v === 'off' : matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+  if (off) document.documentElement.classList.add('no-fx'); })();
+</script>
+<style>
+@property --ang { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+
+:root {
+    --glass-bg: rgba(255,255,255,0.15);
+    --glass-border: rgba(255,255,255,0.3);
+    --glass-shadow: 0 8px 32px 0 rgba(31,38,135,0.2);
+    --text-color: #333;
+    --modal-bg: rgba(255,255,255,0.75);
+    --search-bg: rgba(255,255,255,0.2);
+    --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+
+body {
+    background: linear-gradient(135deg, #c3e0ff, #e6f0ff, #f0e6ff, #ffe6f0, #d9fff0, #c3e0ff);
+    background-attachment: fixed; background-size: 400% 400%;
+    animation: gradientBG 18s ease infinite;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh; min-height: 100dvh; overflow-x: hidden; color: var(--text-color);
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+@keyframes gradientBG { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+
+/* Latar: blob + partikel */
+.blob { position: fixed; border-radius: 50%; filter: blur(80px); z-index: -2; opacity: .6; animation: floatBlob 12s infinite alternate ease-in-out; }
+.blob-1 { width: 420px; height: 420px; background: rgba(74,144,226,.45); top: -100px; left: -100px; }
+.blob-2 { width: 500px; height: 500px; background: rgba(219,112,147,.35); bottom: -200px; right: -100px; animation-delay: -5s; }
+.blob-3 { width: 350px; height: 350px; background: rgba(120,220,180,.35); top: 40%; left: 45%; animation-delay: -8s; animation-duration: 16s; }
+@keyframes floatBlob {
+    0% { transform: translate(0,0) scale(1) rotate(0); }
+    50% { transform: translate(80px,-40px) scale(1.15) rotate(40deg); }
+    100% { transform: translate(-30px,70px) scale(.95) rotate(-20deg); }
+}
+#fx { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+
+/* Search */
+#searchContainer { display: flex; justify-content: center; padding: 12px; position: sticky; top: 0; z-index: 100; animation: dropIn .9s var(--spring) both; }
+@keyframes dropIn { from { transform: translateY(-80px) scale(.6); opacity: 0; } }
+#searchInput {
+    width: 300px; padding: 6px 20px; height: 32px; border: 1px solid var(--glass-border); border-radius: 20px;
+    background: var(--search-bg); color: var(--text-color); font-size: 14px; outline: none;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: var(--glass-shadow);
+    transition: width .5s var(--spring), background .3s, box-shadow .3s;
+}
+#searchInput:focus {
+    width: 420px; background: var(--glass-bg);
+    box-shadow: 0 0 0 3px rgba(74,144,226,.35), 0 0 30px rgba(74,144,226,.45);
+    animation: searchGlow 2.5s ease-in-out infinite;
+}
+@keyframes searchGlow {
+    0%,100% { box-shadow: 0 0 0 3px rgba(74,144,226,.35), 0 0 25px rgba(74,144,226,.4); }
+    50% { box-shadow: 0 0 0 3px rgba(219,112,147,.4), 0 0 35px rgba(219,112,147,.5); }
+}
+
+/* Grid & kartu */
+.container { padding: 16px; display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; width: 100%; }
+
+.glass-card {
+    --rx: 0deg; --ry: 0deg; --s: 1;
+    background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 14px;
+    aspect-ratio: 1/1; position: relative; overflow: hidden; cursor: pointer;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: var(--glass-shadow);
+    transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry)) scale(var(--s));
+    transition: transform .7s var(--spring), box-shadow .3s;
+    animation: cardIn .9s var(--spring) backwards;
+}
+@keyframes cardIn {
+    from { opacity: 0; transform: perspective(900px) translateY(70px) rotateX(55deg) rotateZ(-8deg) scale(.5); filter: blur(10px); }
+    60% { filter: blur(0); }
+}
+.glass-card.tilting { transition: transform .08s linear, box-shadow .3s; }
+@media (hover: hover) { .glass-card:hover { --s: 1.07; box-shadow: 0 18px 40px rgba(31,38,135,.35); z-index: 10; } }
+.glass-card:active { --s: .96; }
+/* kilau mengikuti kursor */
+.glass-card::after {
+    content: ''; position: absolute; inset: 0; z-index: 6; pointer-events: none; opacity: 0; transition: opacity .3s;
+    background: radial-gradient(circle at var(--mx,50%) var(--my,50%), rgba(255,255,255,.6), rgba(255,255,255,0) 55%);
+    mix-blend-mode: overlay;
+}
+.glass-card:hover::after { opacity: 1; }
+/* sapuan cahaya saat hover */
+.glass-card .sweep { position: absolute; inset: 0; z-index: 7; pointer-events: none; overflow: hidden; }
+.glass-card .sweep::before {
+    content: ''; position: absolute; top: -20%; left: -80%; width: 50%; height: 140%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent); transform: skewX(-20deg);
+}
+.glass-card:hover .sweep::before { animation: sweep .9s ease-out; }
+@keyframes sweep { to { left: 140%; } }
+
+.glass-card img {
+    position: absolute; pointer-events: none; transform-origin: top left;
+    image-rendering: -webkit-optimize-contrast; image-rendering: high-quality;
+    filter: contrast(1.05) saturate(1.1); transition: filter .3s;
+}
+.glass-card:hover img { filter: contrast(1.1) saturate(1.35) brightness(1.05); }
+
+/* Shiny: border holo berputar + glow + bintang berkedip */
+.glass-card.shiny { animation: cardIn .9s var(--spring) backwards, shinyGlow 3s ease-in-out infinite 1s; }
+@keyframes shinyGlow {
+    0%,100% { box-shadow: 0 0 14px rgba(255,215,0,.6), 0 0 30px rgba(255,170,0,.3); }
+    33% { box-shadow: 0 0 18px rgba(255,105,180,.6), 0 0 34px rgba(255,105,180,.3); }
+    66% { box-shadow: 0 0 18px rgba(0,220,255,.6), 0 0 34px rgba(0,220,255,.3); }
+}
+.glass-card.shiny::before {
+    content: ''; position: absolute; inset: 0; z-index: 5; pointer-events: none; border-radius: inherit;
+    background: conic-gradient(from var(--ang), #ff0080, #ffd700, #00ffb3, #00b3ff, #b300ff, #ff0080);
+    mix-blend-mode: overlay; opacity: .28; animation: spinAng 4s linear infinite; transition: opacity .3s;
+}
+.glass-card.shiny:hover::before { opacity: .5; }
+@keyframes spinAng { to { --ang: 360deg; } }
+.shiny-badge {
+    position: absolute; top: 8px; left: 8px; z-index: 10; padding: 2px 6px; border-radius: 4px;
+    font-size: 8px; font-weight: 800; font-style: italic; letter-spacing: .5px; color: #4a2c00;
+    background: linear-gradient(110deg, #ffd700 30%, #fff6b0 50%, #ffaa00 70%); background-size: 250% 100%;
+    box-shadow: 0 2px 5px rgba(0,0,0,.3); animation: badgeShine 2.2s linear infinite, badgePulse 1.6s ease-in-out infinite;
+}
+@keyframes badgeShine { from { background-position: 150% 0; } to { background-position: -100% 0; } }
+@keyframes badgePulse { 0%,100% { transform: scale(1) rotate(-2deg); } 50% { transform: scale(1.15) rotate(2deg); } }
+.star {
+    position: absolute; z-index: 8; pointer-events: none; width: 10px; height: 10px; background: #fff;
+    clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+    filter: drop-shadow(0 0 3px #fff); animation: twinkle 1.8s ease-in-out infinite; opacity: 0;
+}
+@keyframes twinkle { 0%,100% { opacity: 0; transform: scale(0) rotate(0); } 50% { opacity: 1; transform: scale(1.3) rotate(90deg); } }
+
+/* Animasi keluar kartu & drag */
+.glass-card.removing { animation: cardOut .45s cubic-bezier(.6,-.4,.7,.2) forwards !important; pointer-events: none; }
+@keyframes cardOut { to { opacity: 0; transform: scale(.1) rotate(200deg); filter: blur(8px); } }
+.glass-card.dragging { opacity: .45; --s: .88; filter: grayscale(.4); }
+.glass-card.drop-target { animation: wiggle .35s ease-in-out infinite; outline: 3px dashed rgba(74,144,226,.9); outline-offset: -3px; }
+@keyframes wiggle { 0%,100% { rotate: -2.5deg; } 50% { rotate: 2.5deg; } }
+
+/* Admin */
+#adminTrigger { position: fixed; top: 0; right: 0; width: 50px; height: 50px; z-index: 1000; cursor: default; }
+.bulk-upload-btn {
+    position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%;
+    background: var(--glass-bg); border: 1px solid var(--glass-border); backdrop-filter: blur(10px);
+    display: none; justify-content: center; align-items: center; font-size: 24px; cursor: pointer;
+    box-shadow: var(--glass-shadow); z-index: 90; animation: floatBtn 3s infinite ease-in-out, btnIn .8s var(--spring) backwards;
+    transition: background .2s, scale .3s var(--spring);
+}
+.bulk-upload-btn::before {
+    content: ''; position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(74,144,226,.7);
+    animation: ring 2s ease-out infinite; pointer-events: none;
+}
+@keyframes ring { from { transform: scale(1); opacity: .9; } to { transform: scale(1.9); opacity: 0; } }
+@keyframes btnIn { from { transform: scale(0) rotate(-180deg); } }
+.bulk-upload-btn:hover { scale: 1.2; rotate: 8deg; background: rgba(255,255,255,.45); }
+@keyframes floatBtn { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+/* Modal */
+.modal {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); backdrop-filter: blur(10px);
+    z-index: 2000; justify-content: center; align-items: center; animation: fadeIn .3s ease both;
+}
+@keyframes fadeIn { from { opacity: 0; } }
+.modal.closing { animation: fadeOut .25s ease forwards; }
+@keyframes fadeOut { to { opacity: 0; } }
+.modal-content {
+    background: var(--modal-bg); border: 1px solid var(--glass-border); border-radius: 20px; padding: 30px;
+    width: 90%; max-width: 400px; text-align: center; box-shadow: var(--glass-shadow); position: relative;
+    color: var(--text-color); animation: bounceIn .65s var(--spring) both;
+}
+@keyframes bounceIn { from { transform: scale(.3) rotate(-8deg) translateY(60px); opacity: 0; } }
+.modal.closing .modal-content { animation: bounceOut .25s ease-in forwards; }
+@keyframes bounceOut { to { transform: scale(.7) translateY(40px); opacity: 0; } }
+.modal-content.shake { animation: shake .5s both; }
+@keyframes shake { 20%,60% { transform: translateX(-12px); } 40%,80% { transform: translateX(12px); } 100% { transform: none; } }
+.modal-content input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid var(--glass-border); border-radius: 10px; background: rgba(255,255,255,.2); outline: none; color: var(--text-color); transition: box-shadow .3s, transform .3s var(--spring); }
+.modal-content input:focus { box-shadow: 0 0 0 3px rgba(74,144,226,.4); transform: scale(1.03); }
+
+.action-btn { width: 100%; padding: 12px; border: none; border-radius: 10px; background: rgba(100,100,100,.7); color: #fff; font-weight: bold; cursor: pointer; transition: background .3s, transform .25s var(--spring), box-shadow .3s; }
+.action-btn:hover:not(:disabled) { background: rgba(100,100,100,.95); transform: translateY(-3px) scale(1.04); box-shadow: 0 8px 18px rgba(0,0,0,.25); }
+.action-btn:active:not(:disabled) { transform: scale(.94); }
+.action-btn:disabled { opacity: .6; cursor: not-allowed; }
+.delete-btn { background: rgba(220,53,69,.85); margin-top: 10px; }
+.delete-btn:hover:not(:disabled) { background: #dc3545; }
+.delete-btn:not(:disabled) { animation: danger 1s ease-in-out infinite; }
+@keyframes danger { 0%,100% { box-shadow: 0 0 0 0 rgba(220,53,69,.6); } 50% { box-shadow: 0 0 0 10px rgba(220,53,69,0); } }
+.apply-all-btn { background: rgba(74,144,226,.85); }
+.apply-all-btn:hover:not(:disabled) { background: #4a90e2; }
+.edit-actions { display: flex; gap: 10px; margin-top: 15px; }
+.close-btn { position: absolute; top: 15px; right: 15px; cursor: pointer; font-size: 22px; line-height: 1; color: var(--text-color); transition: transform .4s var(--spring); }
+.close-btn:hover { transform: rotate(180deg) scale(1.3); }
+
+.preview-container { width: 200px; height: 200px; margin: 0 auto 20px; border: 2px dashed #888; border-radius: 12px; overflow: hidden; position: relative; background: #e0e0e0; cursor: grab; transition: border-color .3s, box-shadow .3s; }
+.preview-container:hover { border-color: #4a90e2; box-shadow: 0 0 18px rgba(74,144,226,.5); }
+.preview-container:active { cursor: grabbing; }
+.preview-container img { position: absolute; pointer-events: none; transform-origin: top left; }
+.zoom-slider-container { margin-bottom: 20px; }
+.zoom-slider-container input { width: 100%; accent-color: #4a90e2; }
+
+#contextMenu {
+    display: none; position: absolute; background: var(--modal-bg); backdrop-filter: blur(15px);
+    border: 1px solid var(--glass-border); border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,.3);
+    z-index: 3000; min-width: 160px; overflow: hidden; transform-origin: top left;
+}
+#contextMenu.open { animation: menuPop .35s var(--spring) both; }
+@keyframes menuPop { from { transform: scale(.4); opacity: 0; } }
+.context-item { padding: 12px 16px; cursor: pointer; font-size: 14px; color: var(--text-color); transition: background .2s, padding-left .25s var(--spring); }
+.context-item:hover { background: var(--glass-bg); padding-left: 24px; }
+
+/* Lightbox */
+#lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0); backdrop-filter: blur(0); z-index: 4000; transition: background .5s, backdrop-filter .5s; }
+#lightbox.active { background: rgba(0,0,0,.85); backdrop-filter: blur(16px); }
+#lbWrapper { display: flex; align-items: center; justify-content: center; gap: 20px; width: 100%; height: 100%; padding: 20px; }
+#lightboxImg { max-width: calc(100% - 140px); max-height: 82vh; border-radius: 14px; box-shadow: 0 25px 60px rgba(0,0,0,.65), 0 0 80px rgba(120,160,255,.25); }
+#lbCaption {
+    position: absolute; bottom: 28px; left: 50%; translate: -50% 0; z-index: 4100; color: #fff; font-size: 15px;
+    padding: 8px 20px; border-radius: 20px; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.25);
+    backdrop-filter: blur(10px); white-space: nowrap; text-transform: capitalize; opacity: 0; transform: translateY(30px);
+    transition: opacity .5s .25s, transform .6s .25s var(--spring);
+}
+#lightbox.active #lbCaption { opacity: 1; transform: none; }
+.lb-nav-btn, .lb-nav-close {
+    width: 50px; height: 50px; border-radius: 50%; flex-shrink: 0; background: rgba(255,255,255,.15);
+    border: 1px solid rgba(255,255,255,.3); color: #fff; font-size: 22px; display: flex; justify-content: center;
+    align-items: center; cursor: pointer; backdrop-filter: blur(10px); z-index: 4100;
+    transition: background .3s, transform .35s var(--spring), opacity .5s; opacity: 0;
+}
+#lightbox.active .lb-nav-btn, #lightbox.active .lb-nav-close { opacity: 1; }
+.lb-nav-btn:hover, .lb-nav-close:hover { background: rgba(255,255,255,.32); transform: scale(1.2); }
+.lb-nav-btn:active, .lb-nav-close:active { transform: scale(.9); }
+.lb-nav-close { position: absolute; top: 30px; right: 30px; font-size: 28px; font-weight: 300; line-height: 1; }
+.lb-nav-close:hover { transform: rotate(90deg) scale(1.2); }
+
+/* Progress */
+#progressModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); backdrop-filter: blur(10px); z-index: 5000; justify-content: center; align-items: center; color: #fff; flex-direction: column; animation: fadeIn .3s both; }
+#progressText { animation: breathe 1.4s ease-in-out infinite; }
+@keyframes breathe { 50% { opacity: .55; transform: scale(.97); } }
+.progress-bar-container { width: 300px; height: 12px; background: rgba(255,255,255,.2); border-radius: 6px; margin-top: 15px; overflow: hidden; }
+.progress-bar-fill {
+    height: 100%; width: 0%; transition: width .3s var(--spring); border-radius: 6px;
+    background: repeating-linear-gradient(45deg, #4a90e2 0 12px, #7bb4ff 12px 24px); background-size: 34px 34px;
+    animation: stripes .6s linear infinite; box-shadow: 0 0 14px #4a90e2;
+}
+@keyframes stripes { to { background-position: 34px 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
+.edit-actions .delete-btn { margin-top: 0; }
+
+/* ===== Tombol Effect ON / OFF (kiri atas) ===== */
+#fxToggle { position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); left: 12px; z-index: 1100; height: 32px;
+    display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 20px; font-size: 12px; font-weight: 700;
+    background: var(--glass-bg); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+#fxToggle .fx-title { padding: 0 6px 0 9px; opacity: .75; }
+#fxToggle .fx-title .s { display: none; }
+#fxToggle button { border: 0; height: 100%; padding: 0 10px; border-radius: 16px; background: transparent; color: var(--text-color); font: inherit; cursor: pointer; }
+#fxToggle button.active { background: #4a90e2; color: #fff; }
+#fxToggle button[data-fx="off"].active { background: #666; }
+
+/* ===== Mode Effect OFF: matikan semua animasi & efek berat ===== */
+html.no-fx *, html.no-fx *::before, html.no-fx *::after {
+    animation: none !important; transition: none !important;
+    backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+html.no-fx body { background: linear-gradient(135deg, #d7e8ff, #f0e6ff, #ffe6f0); background-attachment: scroll; background-size: 100% 100%; }
+html.no-fx .blob, html.no-fx #fx, html.no-fx .sweep, html.no-fx .star,
+html.no-fx .glass-card::after, html.no-fx .glass-card.shiny::before { display: none !important; }
+html.no-fx .glass-card { transform: none !important; background: rgba(255,255,255,.4); box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+html.no-fx .glass-card:hover { outline: 2px solid rgba(74,144,226,.7); outline-offset: -2px; }
+html.no-fx .glass-card.shiny { box-shadow: 0 0 0 2px rgba(255,200,0,.9); }
+html.no-fx .glass-card img, html.no-fx .glass-card:hover img { filter: none; }
+html.no-fx #fxToggle, html.no-fx #searchInput, html.no-fx .bulk-upload-btn { background: rgba(255,255,255,.7); box-shadow: 0 1px 4px rgba(0,0,0,.2); }
+html.no-fx .bulk-upload-btn::before { display: none; }
+html.no-fx .modal, html.no-fx #progressModal { background: rgba(0,0,0,.65); }
+html.no-fx .modal-content, html.no-fx #contextMenu { background: rgba(255,255,255,.97); }
+html.no-fx #lightbox.active { background: rgba(0,0,0,.92); }
+
+/* ===== Responsif ===== */
+@media (max-width: 1100px) { .container { grid-template-columns: repeat(6, 1fr); } }
+@media (max-width: 900px) { .container { grid-template-columns: repeat(5, 1fr); } }
+@media (max-width: 700px) { .container { grid-template-columns: repeat(4, 1fr); }
+    .blob { filter: blur(50px); } .blob-1 { width: 260px; height: 260px; } .blob-2 { width: 300px; height: 300px; } .blob-3 { width: 220px; height: 220px; }
+    #lbWrapper { padding: 56px 8px 72px; gap: 0; }
+    #lightboxImg { max-width: 100%; max-height: calc(100dvh - 140px); object-fit: contain; }
+    .lb-nav-btn { position: absolute; top: 50%; translate: 0 -50%; width: 40px; height: 40px; font-size: 18px; background: rgba(0,0,0,.35); }
+    #lbWrapper .lb-nav-btn:first-child { left: 8px; } #lbWrapper .lb-nav-btn:last-child { right: 8px; }
+    .lb-nav-close { top: calc(10px + env(safe-area-inset-top, 0px)); right: 10px; width: 42px; height: 42px; font-size: 24px; }
+    #lbCaption { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); max-width: 90%; white-space: normal; text-align: center; font-size: 14px; }
+}
+@media (max-width: 600px) {
+    #fxToggle { top: calc(13px + env(safe-area-inset-top, 0px)); left: 8px; height: 30px; font-size: 11px; }
+    #fxToggle .fx-title { padding: 0 2px 0 6px; } #fxToggle .fx-title .l { display: none; } #fxToggle .fx-title .s { display: inline; }
+    #fxToggle button { padding: 0 8px; }
+    #searchContainer { padding: calc(10px + env(safe-area-inset-top, 0px)) 44px 10px 98px; }
+    #searchInput, #searchInput:focus { width: 100%; height: 36px; font-size: 16px; }
+    #adminTrigger { width: 40px; height: 40px; }
+    .container { grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 8px 8px 90px; }
+    .glass-card { border-radius: 10px; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+    .shiny-badge { top: 5px; left: 5px; font-size: 7px; padding: 1px 4px; }
+    .bulk-upload-btn { width: 52px; height: 52px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+    .modal-content { padding: 22px 16px; max-height: 92vh; max-height: 92dvh; overflow-y: auto; }
+    .edit-actions .action-btn { font-size: 13px; padding: 12px 6px; }
+    .preview-container { touch-action: none; }
+}
+@media (max-width: 340px) { .container { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+
+<div class="blob blob-1"></div><div class="blob blob-2"></div><div class="blob blob-3"></div>
+<canvas id="fx"></canvas>
+<div id="adminTrigger"></div>
+<div id="fxToggle" role="group" aria-label="Efek visual">
+    <span class="fx-title"><span class="l">Effect</span><span class="s">✨</span></span>
+    <button type="button" data-fx="on">ON</button>
+    <button type="button" data-fx="off">OFF</button>
+</div>
+
+<div id="searchContainer"><input type="text" id="searchInput" placeholder=""></div>
+<div class="container" id="galleryContainer"></div>
+
+<label class="bulk-upload-btn" id="bulkUploadBtn">📁<input type="file" id="folderInput" webkitdirectory directory multiple style="display:none;"></label>
+
+<div class="modal" id="loginModal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeModal('loginModal')">×</span>
+        <input type="password" id="adminId" placeholder="ID">
+        <input type="password" id="adminPw" placeholder="Password">
+        <button class="action-btn" onclick="handleLogin()">Login</button>
+    </div>
+</div>
+
+<div class="modal" id="deleteAllModal">
+    <div class="modal-content">
+        <h3>Yakin hapus semua gambar?</h3>
+        <p style="margin-bottom:15px;font-size:14px;opacity:.8;">Tindakan ini tidak bisa dibatalkan.</p>
+        <div class="edit-actions">
+            <button class="action-btn" style="background:#666;" onclick="closeModal('deleteAllModal')">Batal</button>
+            <button class="action-btn delete-btn" id="confirmDeleteAllBtn" disabled>Menunggu 3s</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="editModal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeModal('editModal')">×</span>
+        <h3 style="margin-bottom:15px;">Edit Sorotan</h3>
+        <div class="preview-container" id="previewContainer"><img id="previewImg" src=""></div>
+        <div class="zoom-slider-container"><input type="range" id="zoomSlider" min="1" max="3" step="0.01" value="1"></div>
+        <input type="text" id="imgNameInput" placeholder="Nama Gambar">
+        <div class="edit-actions">
+            <button class="action-btn" onclick="saveEdit()">Simpan</button>
+            <button class="action-btn apply-all-btn" onclick="applyToAll()">Terapkan ke Semua</button>
+        </div>
+    </div>
+</div>
+
+<div id="contextMenu"></div>
+
+<div id="lightbox" onclick="if(event.target.id==='lightbox'||event.target.id==='lbWrapper') closeLightbox()">
+    <div class="lb-nav-close" onclick="closeLightbox()">×</div>
+    <div id="lbWrapper" onclick="if(event.target===this) closeLightbox()">
+        <div class="lb-nav-btn" onclick="navigateLightbox(-1, event)">❮</div>
+        <img id="lightboxImg" src="">
+        <div class="lb-nav-btn" onclick="navigateLightbox(1, event)">❯</div>
+    </div>
+    <div id="lbCaption"></div>
+</div>
+
+<div id="progressModal">
+    <h2 id="progressText">Memproses Gambar...</h2>
+    <div class="progress-bar-container"><div class="progress-bar-fill" id="progressBar"></div></div>
+</div>
+
+<script>
+let db;
+const dbName = "PokemonGalleryDB", storeName = "images";
+
+window.onload = async () => {
+    try { await initDB(); imagesData = await getAllImages(); } catch (e) { imagesData = []; }
+    if (!imagesData.length) imagesData = await loadServerData();
+    renderGrid();
+};
+
+// Data publik: gallery.json + folder images/ (di-hosting bersama file ini)
+async function loadServerData() {
+    try {
+        const r = await fetch('gallery.json', { cache: 'no-cache' });
+        if (!r.ok) return [];
+        return (await r.json()).map(d => ({ ...d, src: 'images/' + encodeURIComponent(d.file) }));
+    } catch (e) { return []; }
+}
+
+function initDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(dbName, 1);
+        request.onupgradeneeded = (e) => {
+            db = e.target.result;
+            if (!db.objectStoreNames.contains(storeName)) db.createObjectStore(storeName, { keyPath: "id" });
+        };
+        request.onsuccess = (e) => { db = e.target.result; resolve(); };
+        request.onerror = (e) => reject(e);
+    });
+}
+async function getAllImages() {
+    return new Promise((resolve) => {
+        const request = db.transaction(storeName, "readonly").objectStore(storeName).getAll();
+        request.onsuccess = () => resolve(request.result.sort((a, b) => a.order - b.order));
+    });
+}
+async function saveImagesToDB(images) {
+    return new Promise((resolve) => {
+        const tx = db.transaction(storeName, "readwrite");
+        const store = tx.objectStore(storeName);
+        store.clear();
+        images.forEach((img, idx) => { img.order = idx; store.put(img); });
+        tx.oncomplete = () => resolve();
+    });
+}
+
+let isAdmin = false, imagesData = [], currentEditIndex = -1, currentFilteredIndices = [], currentLightboxIndex = 0;
+let currentImgScale = 1, currentImgPctX = 0, currentImgPctY = 0;
+let isDragging = false, startX, startY, initialPctX, initialPctY, currentAspect = 1;
+
+const root = document.documentElement;
+const noFx = () => root.classList.contains('no-fx');
+const currentSearch = () => document.getElementById('searchInput').value;
+
+function formatName(filename) {
+    return filename.replace(/\.[^/.]+$/, "").replace(/_\d+$/, "").replace(/_/g, " ");
+}
+
+/* ---------- Grid ---------- */
+function renderGrid(searchTerm = '') {
+    const container = document.getElementById('galleryContainer');
+    container.innerHTML = '';
+    currentFilteredIndices = [];
+    let shown = 0;
+
+    imagesData.forEach((imgData, index) => {
+        if (searchTerm && !imgData.name.toLowerCase().includes(searchTerm.toLowerCase())) return;
+        currentFilteredIndices.push(index);
+
+        const card = document.createElement('div');
+        card.className = 'glass-card';
+        card.dataset.i = index;
+        card.style.animationDelay = `${Math.min(shown * 0.03, 0.9)}s`;
+        shown++;
+        card.draggable = isAdmin;
+
+        const isShiny = imgData.name.toLowerCase().includes('shiny');
+        if (isShiny) {
+            card.classList.add('shiny');
+            const badge = document.createElement('div'); badge.className = 'shiny-badge'; badge.innerText = 'SHINY';
+            card.appendChild(badge);
+            for (let s = 0; s < 6; s++) {
+                const st = document.createElement('span'); st.className = 'star';
+                st.style.left = `${8 + Math.random() * 80}%`; st.style.top = `${8 + Math.random() * 80}%`;
+                st.style.animationDelay = `${Math.random() * 2}s`;
+                st.style.scale = `${0.6 + Math.random() * 0.9}`;
+                card.appendChild(st);
+            }
+        }
+        const sweep = document.createElement('div'); sweep.className = 'sweep'; card.appendChild(sweep);
+
+        const img = document.createElement('img');
+        img.src = imgData.src;
+        img.onload = () => {
+            const aspect = img.naturalWidth / img.naturalHeight;
+            let baseW, baseH;
+            if (aspect > 1) { baseH = 100; baseW = 100 * aspect; } else { baseW = 100; baseH = 100 / aspect; }
+            img.style.width = `${baseW * imgData.scale}%`; img.style.height = `${baseH * imgData.scale}%`;
+            img.style.left = `${imgData.pctX}%`; img.style.top = `${imgData.pctY}%`;
+        };
+
+        // Tilt 3D + kilau mengikuti kursor
+        card.addEventListener('mousemove', (e) => {
+            if (noFx() || card.classList.contains('dragging')) return;
+            const r = card.getBoundingClientRect();
+            const x = e.clientX - r.left, y = e.clientY - r.top;
+            card.classList.add('tilting');
+            card.style.setProperty('--rx', `${((y - r.height / 2) / (r.height / 2)) * -16}deg`);
+            card.style.setProperty('--ry', `${((x - r.width / 2) / (r.width / 2)) * 16}deg`);
+            card.style.setProperty('--mx', `${(x / r.width) * 100}%`);
+            card.style.setProperty('--my', `${(y / r.height) * 100}%`);
+        });
+        card.addEventListener('mouseleave', () => {
+            card.classList.remove('tilting');
+            card.style.setProperty('--rx', '0deg'); card.style.setProperty('--ry', '0deg');
+        });
+
+        if (isAdmin) {
+            card.onclick = () => openEditModal(index);
+            card.addEventListener('contextmenu', (e) => { e.preventDefault(); showDeleteMenu(e.pageX, e.pageY, index); });
+            card.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', index); setTimeout(() => card.classList.add('dragging'), 0); });
+            card.addEventListener('dragend', () => card.classList.remove('dragging'));
+            card.addEventListener('dragover', (e) => e.preventDefault());
+            card.addEventListener('dragenter', () => card.classList.add('drop-target'));
+            card.addEventListener('dragleave', () => card.classList.remove('drop-target'));
+            card.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                card.classList.remove('drop-target');
+                const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                const movedItem = imagesData.splice(fromIndex, 1)[0];
+                imagesData.splice(index, 0, movedItem);
+                await saveImagesToDB(imagesData);
+                renderGrid(currentSearch());
+            });
+        } else {
+            card.onclick = () => openLightbox(index, card);
+        }
+
+        card.appendChild(img); container.appendChild(card);
+    });
+}
+
+document.getElementById('searchInput').addEventListener('input', (e) => renderGrid(e.target.value));
+
+/* ---------- Context menu ---------- */
+function openMenu(x, y) {
+    const m = document.getElementById('contextMenu');
+    m.style.display = 'block';
+    x = Math.max(8, Math.min(x, scrollX + innerWidth - m.offsetWidth - 8));
+    y = Math.max(8, Math.min(y, scrollY + innerHeight - m.offsetHeight - 8));
+    m.style.left = x + 'px'; m.style.top = y + 'px';
+    m.classList.remove('open'); void m.offsetWidth; m.classList.add('open');
+}
+function closeContextMenu() { document.getElementById('contextMenu').style.display = 'none'; }
+
+function showAdminMenu(px, py) {
+    const ctxMenu = document.getElementById('contextMenu');
+    ctxMenu.innerHTML = '';
+    if (!isAdmin) {
+        const item = document.createElement('div'); item.className = 'context-item'; item.innerText = 'aram';
+        item.onclick = () => { openModal('loginModal'); closeContextMenu(); };
+        ctxMenu.appendChild(item);
+    } else {
+        const itemHome = document.createElement('div'); itemHome.className = 'context-item'; itemHome.innerText = 'Kembali ke home';
+        itemHome.onclick = () => location.reload();
+        ctxMenu.appendChild(itemHome);
+        const itemExport = document.createElement('div'); itemExport.className = 'context-item'; itemExport.innerText = 'Export untuk hosting (.zip)';
+        itemExport.onclick = () => { closeContextMenu(); exportSite(); };
+        ctxMenu.appendChild(itemExport);
+        const itemDraft = document.createElement('div'); itemDraft.className = 'context-item'; itemDraft.innerText = 'Buang draft lokal';
+        itemDraft.onclick = async () => { closeContextMenu(); if (confirm('Buang draft di browser ini dan muat ulang dari gallery.json?')) { await saveImagesToDB([]); location.reload(); } };
+        ctxMenu.appendChild(itemDraft);
+        const itemDeleteAll = document.createElement('div'); itemDeleteAll.className = 'context-item';
+        itemDeleteAll.innerText = 'Hapus semua gambar'; itemDeleteAll.style.color = '#dc3545';
+        itemDeleteAll.onclick = () => { triggerDeleteAll(); closeContextMenu(); };
+        ctxMenu.appendChild(itemDeleteAll);
+    }
+    openMenu(px - 100, py);
+}
+let ignoreClickUntil = 0;
+(function () {
+    const t = document.getElementById('adminTrigger'); let timer;
+    t.addEventListener('contextmenu', (e) => { e.preventDefault(); showAdminMenu(e.pageX, e.pageY); });
+    // HP: tekan lama 0,6 detik di pojok kanan atas = klik kanan
+    t.addEventListener('touchstart', (e) => { const p = e.touches[0]; timer = setTimeout(() => { ignoreClickUntil = Date.now() + 600; showAdminMenu(p.pageX, p.pageY); }, 600); }, { passive: true });
+    ['touchend', 'touchmove', 'touchcancel'].forEach(n => t.addEventListener(n, () => clearTimeout(timer), { passive: true }));
+})();
+
+/* ---------- Hapus ---------- */
+let deleteTimer;
+function triggerDeleteAll() {
+    openModal('deleteAllModal');
+    const btn = document.getElementById('confirmDeleteAllBtn');
+    btn.disabled = true; btn.innerText = 'Menunggu 3s';
+    let count = 3;
+    clearInterval(deleteTimer);
+    deleteTimer = setInterval(() => {
+        count--;
+        if (count > 0) btn.innerText = `Menunggu ${count}s`;
+        else { clearInterval(deleteTimer); btn.disabled = false; btn.innerText = 'Klik untuk Hapus!'; }
+    }, 1000);
+
+    btn.onclick = async () => {
+        closeModal('deleteAllModal');
+        const cards = [...document.querySelectorAll('.glass-card')];
+        cards.forEach((c, i) => { c.style.animationDelay = `${Math.min(i * 0.02, 0.5)}s`; c.classList.add('removing'); });
+        await new Promise(r => setTimeout(r, noFx() || !cards.length ? 0 : 450 + Math.min(cards.length * 20, 500)));
+        imagesData = [];
+        await saveImagesToDB(imagesData);
+        renderGrid();
+    };
+}
+
+function showDeleteMenu(x, y, index) {
+    const ctxMenu = document.getElementById('contextMenu');
+    ctxMenu.innerHTML = '';
+    const item = document.createElement('div');
+    item.className = 'context-item'; item.innerText = 'Hapus Gambar'; item.style.color = '#dc3545';
+    item.onclick = async () => {
+        closeContextMenu();
+        const card = document.querySelector(`.glass-card[data-i="${index}"]`);
+        if (card) { card.style.animationDelay = '0s'; card.classList.add('removing'); await new Promise(r => setTimeout(r, noFx() ? 0 : 430)); }
+        imagesData.splice(index, 1); await saveImagesToDB(imagesData);
+        renderGrid(currentSearch());
+    };
+    ctxMenu.appendChild(item); openMenu(x, y);
+}
+document.addEventListener('click', () => { if (Date.now() > ignoreClickUntil) closeContextMenu(); });
+
+/* ---------- Modal ---------- */
+function openModal(id) {
+    const m = document.getElementById(id);
+    m.classList.remove('closing'); m.style.display = 'flex';
+}
+function closeModal(id) {
+    const m = document.getElementById(id);
+    if (m.style.display !== 'flex' || m.classList.contains('closing')) return;
+    m.classList.add('closing');
+    setTimeout(() => { m.style.display = 'none'; m.classList.remove('closing'); }, 250);
+}
+
+function handleLogin() {
+    if (document.getElementById('adminId').value === '1' && document.getElementById('adminPw').value === '1') {
+        isAdmin = true; closeModal('loginModal');
+        document.getElementById('bulkUploadBtn').style.display = 'flex';
+        renderGrid();
+    } else {
+        const box = document.querySelector('#loginModal .modal-content');
+        box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
+    }
+}
+
+/* ---------- Upload ---------- */
+function resizeImageForDB(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image(); img.src = e.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
+                let w = img.width, h = img.height; const MAX_SIZE = 1400;
+                if (w > h && w > MAX_SIZE) { h *= MAX_SIZE / w; w = MAX_SIZE; }
+                else if (h > MAX_SIZE) { w *= MAX_SIZE / h; h = MAX_SIZE; }
+                canvas.width = w; canvas.height = h; ctx.drawImage(img, 0, 0, w, h);
+                const defaultPctY = (w / h < 0.6) ? 0 : (100 - (100 / (w / h))) / 2;
+                resolve({ src: canvas.toDataURL('image/jpeg', 0.85), pctY: defaultPctY });
+            };
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+if (matchMedia('(pointer: coarse)').matches) { const fi = document.getElementById('folderInput'); fi.removeAttribute('webkitdirectory'); fi.removeAttribute('directory'); fi.accept = 'image/*'; }
+document.getElementById('folderInput').addEventListener('change', async function (e) {
+    const files = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
+    if (files.length === 0) return;
+    const modal = document.getElementById('progressModal');
+    const text = document.getElementById('progressText');
+    const bar = document.getElementById('progressBar');
+    modal.style.display = 'flex';
+    for (let i = 0; i < files.length; i++) {
+        text.innerText = `Memproses ${i + 1} dari ${files.length}...`;
+        bar.style.width = `${((i + 1) / files.length) * 100}%`;
+        const { src, pctY } = await resizeImageForDB(files[i]);
+        const id = Date.now() + i;
+        imagesData.push({ id, file: id + '.jpg', src, name: formatName(files[i].name), scale: 1, pctX: 0, pctY });
+        await new Promise(r => setTimeout(r, 10));
+    }
+    await saveImagesToDB(imagesData);
+    modal.style.display = 'none'; renderGrid(); this.value = '';
+});
+
+/* ---------- Edit ---------- */
+function openEditModal(index) {
+    currentEditIndex = index; const data = imagesData[index]; const img = document.getElementById('previewImg');
+    img.src = data.src; document.getElementById('imgNameInput').value = data.name;
+    currentImgScale = data.scale || 1; currentImgPctX = data.pctX || 0; currentImgPctY = data.pctY || 0;
+    document.getElementById('zoomSlider').value = currentImgScale;
+    img.onload = () => { currentAspect = img.naturalWidth / img.naturalHeight; updatePreviewImg(); };
+    openModal('editModal');
+}
+
+function updatePreviewImg() {
+    const img = document.getElementById('previewImg');
+    let baseW, baseH;
+    if (currentAspect > 1) { baseH = 100; baseW = 100 * currentAspect; } else { baseW = 100; baseH = 100 / currentAspect; }
+    const scaledW = baseW * currentImgScale, scaledH = baseH * currentImgScale;
+    img.style.width = `${scaledW}%`; img.style.height = `${scaledH}%`;
+    currentImgPctX = Math.max(100 - scaledW, Math.min(0, currentImgPctX));
+    currentImgPctY = Math.max(100 - scaledH, Math.min(0, currentImgPctY));
+    img.style.left = `${currentImgPctX}%`; img.style.top = `${currentImgPctY}%`;
+}
+
+const previewContainer = document.getElementById('previewContainer');
+function startPan(x, y) { isDragging = true; startX = x; startY = y; initialPctX = currentImgPctX; initialPctY = currentImgPctY; }
+function doPan(x, y) {
+    if (!isDragging) return;
+    const sz = previewContainer.clientWidth || 200;
+    currentImgPctX = initialPctX + ((x - startX) / sz) * 100;
+    currentImgPctY = initialPctY + ((y - startY) / sz) * 100;
+    updatePreviewImg();
+}
+previewContainer.addEventListener('mousedown', (e) => startPan(e.clientX, e.clientY));
+window.addEventListener('mousemove', (e) => doPan(e.clientX, e.clientY));
+window.addEventListener('mouseup', () => { isDragging = false; });
+previewContainer.addEventListener('touchstart', (e) => { const t = e.touches[0]; startPan(t.clientX, t.clientY); }, { passive: true });
+previewContainer.addEventListener('touchmove', (e) => { const t = e.touches[0]; doPan(t.clientX, t.clientY); e.preventDefault(); }, { passive: false });
+window.addEventListener('touchend', () => { isDragging = false; });
+document.getElementById('zoomSlider').addEventListener('input', (e) => { currentImgScale = parseFloat(e.target.value); updatePreviewImg(); });
+
+async function saveEdit() {
+    const d = imagesData[currentEditIndex];
+    d.name = document.getElementById('imgNameInput').value;
+    d.scale = currentImgScale; d.pctX = currentImgPctX; d.pctY = currentImgPctY;
+    await saveImagesToDB(imagesData);
+    renderGrid(currentSearch());
+    closeModal('editModal');
+}
+
+async function applyToAll() {
+    if (confirm('Terapkan zoom & posisi ini ke SEMUA gambar?')) {
+        imagesData.forEach(img => { img.scale = currentImgScale; img.pctX = currentImgPctX; img.pctY = currentImgPctY; });
+        await saveImagesToDB(imagesData); renderGrid(currentSearch()); closeModal('editModal');
+    }
+}
+
+/* ---------- Lightbox ---------- */
+let lbBusy = false, lbClosing = false;
+const lbImg = () => document.getElementById('lightboxImg');
+
+function updateLightboxImage() {
+    const real = currentFilteredIndices[currentLightboxIndex];
+    lbImg().src = imagesData[real].src;
+    document.getElementById('lbCaption').innerText =
+        `${imagesData[real].name}  ·  ${currentLightboxIndex + 1}/${currentFilteredIndices.length}`;
+}
+
+function openLightbox(globalIndex, cardEl) {
+    currentLightboxIndex = currentFilteredIndices.indexOf(globalIndex);
+    lbClosing = false; lbBusy = false;
+    updateLightboxImage();
+    const lb = document.getElementById('lightbox'), el = lbImg();
+    lb.style.display = 'flex';
+    requestAnimationFrame(() => {
+        lb.classList.add('active');
+        if (noFx()) return;
+        const t = el.getBoundingClientRect();
+        if (cardEl && t.width) {
+            // zoom terbang dari posisi kartu ke tengah layar
+            const c = cardEl.getBoundingClientRect();
+            const dx = (c.left + c.width / 2) - (t.left + t.width / 2);
+            const dy = (c.top + c.height / 2) - (t.top + t.height / 2);
+            el.animate([
+                { transform: `translate(${dx}px, ${dy}px) scale(${c.width / t.width}) rotate(-12deg)`, opacity: 0.2 },
+                { transform: 'none', opacity: 1 }
+            ], { duration: 700, easing: 'cubic-bezier(.2,1.2,.3,1)' });
+        }
+    });
+}
+
+function closeLightbox() {
+    const lb = document.getElementById('lightbox');
+    if (lbClosing || lb.style.display !== 'flex') return;
+    lbClosing = true;
+    lb.classList.remove('active');
+    const el = lbImg();
+    if (!noFx()) el.animate([{ transform: 'none', opacity: 1 }, { transform: 'scale(.6) rotate(6deg)', opacity: 0 }],
+        { duration: 350, easing: 'ease-in', fill: 'forwards' });
+    setTimeout(() => { lb.style.display = 'none'; el.getAnimations().forEach(a => a.cancel()); lbClosing = false; }, noFx() ? 0 : 400);
+}
+
+function navigateLightbox(dir, e) {
+    if (e) e.stopPropagation();
+    if (lbBusy || !currentFilteredIndices.length) return;
+    if (noFx()) { currentLightboxIndex = (currentLightboxIndex + dir + currentFilteredIndices.length) % currentFilteredIndices.length; updateLightboxImage(); return; }
+    lbBusy = true;
+    const el = lbImg();
+    const out = el.animate([
+        { transform: 'none', opacity: 1, filter: 'blur(0)' },
+        { transform: `translateX(${-dir * 140}px) rotate(${-dir * 8}deg) scale(.75)`, opacity: 0, filter: 'blur(8px)' }
+    ], { duration: 220, easing: 'ease-in', fill: 'forwards' });
+    out.onfinish = () => {
+        currentLightboxIndex = (currentLightboxIndex + dir + currentFilteredIndices.length) % currentFilteredIndices.length;
+        el.getAnimations().forEach(a => a.cancel());
+        updateLightboxImage();
+        const inn = el.animate([
+            { transform: `translateX(${dir * 140}px) rotate(${dir * 8}deg) scale(.75)`, opacity: 0, filter: 'blur(8px)' },
+            { transform: 'none', opacity: 1, filter: 'blur(0)' }
+        ], { duration: 520, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+        inn.onfinish = () => { lbBusy = false; };
+    };
+}
+
+document.addEventListener('keydown', (e) => {
+    const lb = document.getElementById('lightbox');
+    if (lb.classList.contains('active')) {
+        if (e.key === 'Escape') closeLightbox();
+        if (e.key === 'ArrowRight') navigateLightbox(1);
+        if (e.key === 'ArrowLeft') navigateLightbox(-1);
+    } else if (e.key === 'Escape') {
+        ['editModal', 'loginModal', 'deleteAllModal'].forEach(closeModal); closeContextMenu();
+    }
+});
+
+/* ---------- Export ZIP: gallery.json + images/ ---------- */
+const crcTable = (() => { const t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u8) { let c = -1; for (let i = 0; i < u8.length; i++) c = crcTable[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ -1) >>> 0; }
+function makeZip(files) {
+    const enc = new TextEncoder(), parts = [], central = []; let off = 0;
+    for (const f of files) {
+        const nm = enc.encode(f.name), crc = crc32(f.data), sz = f.data.length;
+        const lh = new DataView(new ArrayBuffer(30));
+        lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(12, 0x21, true);
+        lh.setUint32(14, crc, true); lh.setUint32(18, sz, true); lh.setUint32(22, sz, true); lh.setUint16(26, nm.length, true);
+        parts.push(lh.buffer, nm, f.data);
+        const ch = new DataView(new ArrayBuffer(46));
+        ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(14, 0x21, true);
+        ch.setUint32(16, crc, true); ch.setUint32(20, sz, true); ch.setUint32(24, sz, true); ch.setUint16(28, nm.length, true); ch.setUint32(42, off, true);
+        central.push(ch.buffer, nm);
+        off += 30 + nm.length + sz;
+    }
+    const cdSize = central.reduce((a, b) => a + b.byteLength, 0);
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+    end.setUint32(12, cdSize, true); end.setUint32(16, off, true);
+    return new Blob([...parts, ...central, end.buffer], { type: 'application/zip' });
+}
+async function exportSite() {
+    if (!imagesData.length) return alert('Belum ada gambar untuk di-export.');
+    const modal = document.getElementById('progressModal'), text = document.getElementById('progressText'), bar = document.getElementById('progressBar');
+    modal.style.display = 'flex';
+    try {
+        const files = [], items = [];
+        for (let i = 0; i < imagesData.length; i++) {
+            const d = imagesData[i], file = d.file || (d.id + '.jpg');
+            text.innerText = `Menyiapkan ${i + 1} dari ${imagesData.length}...`; bar.style.width = `${((i + 1) / imagesData.length) * 100}%`;
+            const buf = await (await fetch(d.src)).arrayBuffer();
+            files.push({ name: 'images/' + file, data: new Uint8Array(buf) });
+            items.push({ id: d.id, file, name: d.name, scale: d.scale, pctX: d.pctX, pctY: d.pctY });
+        }
+        files.unshift({ name: 'gallery.json', data: new TextEncoder().encode(JSON.stringify(items, null, 1)) });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(makeZip(files)); a.download = 'pokemon-gallery-hosting.zip'; a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    } catch (e) { alert('Export gagal: ' + e.message); }
+    modal.style.display = 'none';
+}
+
+/* ---------- Swipe di lightbox (HP) ---------- */
+(function () {
+    const lb = document.getElementById('lightbox'); let sx = 0, sy = 0;
+    lb.addEventListener('touchstart', (e) => { sx = e.changedTouches[0].clientX; sy = e.changedTouches[0].clientY; }, { passive: true });
+    lb.addEventListener('touchend', (e) => {
+        if (!lb.classList.contains('active')) return;
+        const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) navigateLightbox(dx < 0 ? 1 : -1);
+    }, { passive: true });
+})();
+
+/* ---------- Partikel latar (bisa dihentikan) ---------- */
+const Particles = (function () {
+    const cv = document.getElementById('fx'), cx = cv.getContext('2d');
+    const colors = ['255,255,255', '120,170,255', '255,150,190', '150,240,210'];
+    const count = matchMedia('(max-width: 600px)').matches ? 18 : 45;
+    let W = 0, H = 0, ps = [], raf = 0, running = false, mouse = { x: -999, y: -999 };
+    function resize() { W = cv.width = innerWidth; H = cv.height = innerHeight; }
+    addEventListener('resize', () => { if (running) resize(); });
+    addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
+    function init() {
+        for (let i = 0; i < count; i++) ps.push({
+            x: Math.random() * innerWidth, y: Math.random() * innerHeight, r: 2 + Math.random() * 6,
+            vy: -(0.15 + Math.random() * 0.5), vx: 0, sway: Math.random() * 6.28, c: colors[i % colors.length], a: 0.25 + Math.random() * 0.4
+        });
+    }
+    function loop() {
+        if (!running) return;
+        cx.clearRect(0, 0, W, H);
+        for (const p of ps) {
+            p.sway += 0.01; p.x += Math.sin(p.sway) * 0.4 + p.vx; p.y += p.vy;
+            const dx = p.x - mouse.x, dy = p.y - mouse.y, d = Math.hypot(dx, dy);
+            if (d < 120) { p.vx += (dx / d) * 0.15; }
+            p.vx *= 0.95;
+            if (p.y < -20) { p.y = H + 20; p.x = Math.random() * W; }
+            if (p.x < -20) p.x = W + 20; if (p.x > W + 20) p.x = -20;
+            const g = cx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 2.5);
+            g.addColorStop(0, `rgba(${p.c},${p.a})`); g.addColorStop(1, `rgba(${p.c},0)`);
+            cx.fillStyle = g; cx.beginPath(); cx.arc(p.x, p.y, p.r * 2.5, 0, 6.283); cx.fill();
+        }
+        raf = requestAnimationFrame(loop);
+    }
+    return {
+        start() { if (running) return; running = true; resize(); if (!ps.length) init(); raf = requestAnimationFrame(loop); },
+        stop() { running = false; cancelAnimationFrame(raf); cx.clearRect(0, 0, W, H); }
+    };
+})();
+
+/* ---------- Tombol Effect ON / OFF ---------- */
+function setFx(on, save = true) {
+    root.classList.toggle('no-fx', !on);
+    document.querySelectorAll('#fxToggle button').forEach(b => {
+        const active = (b.dataset.fx === 'on') === on;
+        b.classList.toggle('active', active); b.setAttribute('aria-pressed', active);
+    });
+    if (save) { try { localStorage.setItem('fx', on ? 'on' : 'off'); } catch (e) {} }
+    on ? Particles.start() : Particles.stop();
+}
+document.querySelectorAll('#fxToggle button').forEach(b => b.addEventListener('click', () => setFx(b.dataset.fx === 'on')));
+setFx(!noFx(), false);
+</script>
+<script src="persist.js"></script>
+</body>
+</html>
