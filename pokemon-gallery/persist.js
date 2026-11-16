@@ -93,28 +93,34 @@
   };
 })();
 
-/* ===== Perbaikan HP: kurangi efek berat supaya gambar tidak kedip (desktop tidak berubah) ===== */
+/* ===== Perbaikan HP: mode ringan (tanpa animasi berat) supaya gambar tidak kedip. Desktop tidak berubah ===== */
 (function () {
+  // dianggap HP/tablet bila layar sempit ATAU input sentuh (dicek beberapa cara, karena tiap browser HP berbeda)
+  const lite = innerWidth <= 700 || matchMedia('(pointer: coarse)').matches || matchMedia('(hover: none)').matches;
+  if (lite) document.documentElement.classList.add('pg-lite');
+  const L = 'html.pg-lite:not(.no-fx)';
   const css = `
-@media (hover: none) and (pointer: coarse) {
-  html:not(.no-fx) body { animation: none; background-attachment: scroll; background-size: 100% 100%; }
-  html:not(.no-fx) .blob { animation: none; filter: blur(40px); }
-  html:not(.no-fx) .glass-card, html:not(.no-fx) .glass-card.shiny {
-    backdrop-filter: none; -webkit-backdrop-filter: none; transform: none; transition: none; animation: pg-in .45s ease backwards; }
-  html:not(.no-fx) .glass-card.shiny { box-shadow: 0 0 0 2px rgba(255,200,0,.9), 0 0 14px rgba(255,190,0,.55); }
-  html:not(.no-fx) .glass-card.shiny::before, html:not(.no-fx) .glass-card::after, html:not(.no-fx) .glass-card .sweep { display: none; }
-  html:not(.no-fx) .glass-card img, html:not(.no-fx) .glass-card:hover img { filter: none; transition: none; image-rendering: auto; }
-  html:not(.no-fx) .shiny-badge { animation: none; }
-  html:not(.no-fx) .star { filter: none; }
-  html:not(.no-fx) .star:nth-of-type(n+4) { display: none; }
-  html:not(.no-fx) #searchContainer { animation: none; }
-  html:not(.no-fx) #searchInput, html:not(.no-fx) #searchInput:focus, html:not(.no-fx) #fxToggle, html:not(.no-fx) .bulk-upload-btn {
-    animation: none; backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(255,255,255,.75); }
-  html:not(.no-fx) .modal, html:not(.no-fx) #progressModal { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(0,0,0,.6); }
-  html:not(.no-fx) #lightbox.active { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(0,0,0,.92); }
-  html:not(.no-fx) #lbCaption, html:not(.no-fx) .lb-nav-btn, html:not(.no-fx) .lb-nav-close { backdrop-filter: none; -webkit-backdrop-filter: none; }
-  html:not(.no-fx) #contextMenu { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(255,255,255,.97); }
-}
+${L} body { animation: none; background-attachment: scroll; background-size: 100% 100%; }
+${L} .blob { animation: none; filter: none; opacity: .8; }
+${L} .blob-1 { background: radial-gradient(circle, rgba(74,144,226,.45), rgba(74,144,226,0) 70%); }
+${L} .blob-2 { background: radial-gradient(circle, rgba(219,112,147,.35), rgba(219,112,147,0) 70%); }
+${L} .blob-3 { background: radial-gradient(circle, rgba(120,220,180,.35), rgba(120,220,180,0) 70%); }
+${L} .glass-card, ${L} .glass-card.shiny {
+  backdrop-filter: none; -webkit-backdrop-filter: none; transform: none; transition: none;
+  animation: pg-in .45s ease backwards; box-shadow: 0 2px 8px rgba(31,38,135,.18); }
+${L} .glass-card.shiny { box-shadow: 0 0 0 2px rgba(255,200,0,.9), 0 0 14px rgba(255,190,0,.55); }
+${L} .glass-card.shiny::before, ${L} .glass-card::after, ${L} .glass-card .sweep { display: none; }
+${L} .glass-card img, ${L} .glass-card:hover img { filter: none; transition: none; image-rendering: auto; }
+${L} .shiny-badge { animation: none; }
+${L} .star { animation: none; opacity: .85; filter: none; }
+${L} .star:nth-of-type(n+3) { display: none; }
+${L} #searchContainer { animation: none; }
+${L} #searchInput, ${L} #searchInput:focus, ${L} #fxToggle, ${L} .bulk-upload-btn {
+  animation: none; backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(255,255,255,.75); }
+${L} .modal, ${L} #progressModal { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(0,0,0,.6); }
+${L} #lightbox.active { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(0,0,0,.92); }
+${L} #lbCaption, ${L} .lb-nav-btn, ${L} .lb-nav-close { backdrop-filter: none; -webkit-backdrop-filter: none; }
+${L} #contextMenu { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(255,255,255,.97); }
 @keyframes pg-in { from { opacity: 0; transform: translateY(14px); } }
 .glass-card { -webkit-touch-callout: none; }
 .glass-card.pg-armed { scale: 1.05; box-shadow: 0 10px 28px rgba(31,38,135,.35); }
@@ -128,7 +134,7 @@ body.pg-dragging, body.pg-dragging * { cursor: grabbing !important; }
 /* ===== Geser untuk mengurutkan: animasi bergeser, auto-scroll, jalan di mouse & layar sentuh ===== */
 (function () {
   const grid = document.getElementById('galleryContainer');
-  const coarse = matchMedia('(hover: none) and (pointer: coarse)').matches;
+  const coarse = document.documentElement.classList.contains('pg-lite');
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   let st = null, busy = false, blockUntil = 0;
 
