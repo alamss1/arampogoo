@@ -19,6 +19,8 @@
   const pwEl = $('adminPw');
   if (pwEl) { pwEl.placeholder = 'Password'; pwEl.addEventListener('keydown', e => { if (e.key === 'Enter') window.handleLogin(); }); }
 
+  window.__pgApi = api; window.__pgSay = say;   // dipakai accounts.js
+
   // ---- ambil data dari server (menggantikan IndexedDB) ----
   window.initDB = async () => {};
   window.getAllImages = async () => [];
@@ -75,6 +77,7 @@
       $('bulkUploadBtn').style.display = 'flex';
       imagesData = await window.loadServerData(true);
       renderGrid();
+      window.dispatchEvent(new Event('pg-login'));
     } else {
       pw = ''; box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
     }
@@ -188,6 +191,7 @@ body.pg-dragging, body.pg-dragging * { cursor: grabbing !important; }
       ox: gr.left + scrollX + (parseFloat(cs.paddingLeft) || 0), oy: gr.top + scrollY + (parseFloat(cs.paddingTop) || 0),
       sx: cards[0].offsetWidth + gx, sy: cards[0].offsetHeight + gy };
     st.order = cards; st.slot = cards.indexOf(el); st.dragging = true;
+    st.maxScroll = Math.max(0, document.documentElement.scrollHeight - innerHeight); // batas gulir = ujung isi galeri (kartu yang ikut tergeser tidak boleh memperpanjang halaman)
     const b = pos(st.slot); st.grabX = st.sx + scrollX - b.x; st.grabY = st.sy + scrollY - b.y;
     el.classList.remove('pg-armed'); el.classList.add('pg-drag'); tr(el, 'scale .15s ease, box-shadow .15s');
     document.body.classList.add('pg-dragging');
@@ -200,7 +204,7 @@ body.pg-dragging, body.pg-dragging * { cursor: grabbing !important; }
     // auto-scroll saat jari/kursor di dekat tepi atas atau bawah layar (makin lama makin cepat)
     const TOP = 110, BOT = 90; let v = 0;
     if (st.y < TOP) v = -clamp((TOP - st.y) / TOP, 0, 1); else if (st.y > innerHeight - BOT) v = clamp((st.y - (innerHeight - BOT)) / BOT, 0, 1);
-    if (v) { st.edge += dt; scrollBy(0, Math.sign(v) * (5 + 28 * v * v) * (1 + Math.min(2, st.edge / 900)) * dt / 16.7); } else st.edge = 0;
+    if (v) { st.edge += dt; scrollTo(scrollX, clamp(scrollY + Math.sign(v) * (5 + 28 * v * v) * (1 + Math.min(2, st.edge / 900)) * dt / 16.7, 0, st.maxScroll)); } else st.edge = 0;
     const px = st.x + scrollX, py = st.y + scrollY;
     const s = slotAt(px, py, st.g); if (s !== st.slot) reorder(s);
     const b = pos(st.slot);
@@ -264,3 +268,6 @@ body.pg-dragging, body.pg-dragging * { cursor: grabbing !important; }
   document.addEventListener('contextmenu', e => { if ((st && (st.armed || st.dragging)) || Date.now() < blockUntil) { e.preventDefault(); e.stopPropagation(); } }, true);
   grid.addEventListener('click', e => { if (Date.now() < blockUntil) { e.stopPropagation(); e.preventDefault(); } }, true);
 })();
+
+/* ===== Halaman Account (file terpisah: accounts.js) ===== */
+(function () { const s = document.createElement('script'); s.src = 'accounts.js'; document.body.appendChild(s); })();

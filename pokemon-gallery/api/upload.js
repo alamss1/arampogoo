@@ -4,7 +4,7 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).end();
   if (!isAdmin(req)) return deny(res);
   const path = String(req.query.path || '');
-  if (!/^images\/[a-z0-9]{6,40}\.jpg$/.test(path)) return res.status(400).json({ error: 'path tidak valid' });
+  if (!/^(images|acc)\/[a-z0-9]{6,41}\.jpg$/.test(path)) return res.status(400).json({ error: 'path tidak valid' });
   try {
     const chunks = []; let size = 0;
     for await (const c of req) {
